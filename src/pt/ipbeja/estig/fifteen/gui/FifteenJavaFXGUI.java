@@ -5,7 +5,6 @@ import java.util.*;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
@@ -20,7 +19,6 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import pt.ipbeja.estig.fifteen.model.Direction;
 import pt.ipbeja.estig.fifteen.model.FifteenModel;
@@ -37,7 +35,7 @@ public class FifteenJavaFXGUI extends Application implements View {
 	private final String ICON_FILE = "/resources/images/puzzle15.jpg";
 	private FifteenModel model;
 
-	private List<PieceJFXButton> buttons;
+	private List<PositionImage> positionImages;
 	private Button solveButton;
 	private GridPane panBtns;
 	private Label timeLabel;
@@ -54,11 +52,11 @@ public class FifteenJavaFXGUI extends Application implements View {
 	 */
 	public FifteenJavaFXGUI() {
 		this.model = null;
-		this.buttons = null;
+		this.positionImages = null;
 	}
 
 	@Override
-	public void start(Stage stage) throws Exception {
+	public void start(Stage stage) {
 		this.createModel();
 		this.mixModel();
 
@@ -86,6 +84,7 @@ public class FifteenJavaFXGUI extends Application implements View {
 			Image ico = new Image(filename);
 			stage.getIcons().add(ico);
 		} catch (Exception ex) {
+			System.err.println("Error setting icon");
 		}
 	}
 
@@ -95,21 +94,18 @@ public class FifteenJavaFXGUI extends Application implements View {
 		this.panBtns = new GridPane();
 		this.panBtns.setAlignment(Pos.CENTER);
 
-		this.buttons = new ArrayList<>();
+		this.positionImages = new ArrayList<>();
 		for (int row = 0; row < nRows; row++) {
 			for (int col = 0; col < nCols; col++) {
 				Position pos = new Position(row, col);
 				String text = this.model.pieceTextAt(pos);
-				PieceJFXButton b = new PieceJFXButton(text, pos);
-				this.panBtns.add(b, col, row);
-				this.buttons.add(b);
-				b.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-				//b.setPadding(new Insets(5));
-				b.setPrefHeight(Double.MAX_VALUE);
-				b.setPrefSize(100, 100);
-				b.setOnMouseClicked(this::handle);
-				GridPane.setVgrow(b, Priority.ALWAYS);
-				GridPane.setHgrow(b, Priority.ALWAYS);
+				PositionImage pi = new PositionImage(text, pos);
+				this.panBtns.add(pi, col, row);
+				this.positionImages.add(pi);
+				pi.setOnMouseClicked(this::handle);
+
+				GridPane.setVgrow(pi, Priority.ALWAYS);
+				GridPane.setHgrow(pi, Priority.ALWAYS);
 			}
 		}
 		return panBtns;
@@ -120,8 +116,8 @@ public class FifteenJavaFXGUI extends Application implements View {
 	 * The model is then responsible to notify this (and other) views
 	 */
 	public void handle(MouseEvent e) {
-		PieceJFXButton btn = (PieceJFXButton) e.getSource();
-		Position pos = btn.getPosition();
+		PositionImage pi = (PositionImage) e.getSource();
+		Position pos = pi.getPosition();
 		model.pieceSelected(pos); // inform model
 	}
 
@@ -130,7 +126,7 @@ public class FifteenJavaFXGUI extends Application implements View {
 			@Override
 			public void handle(KeyEvent event) {
 				model.keyPressed(directionMap.get(event.getCode()));
-			};
+			}
 		});
 	}
 
@@ -169,9 +165,9 @@ public class FifteenJavaFXGUI extends Application implements View {
 	 * Updates the pieces content by asking the model
 	 */
 	private void updateAllLayout() {
-		for (PieceJFXButton b : this.buttons) {
-			String btnText = this.model.pieceTextAt(b.getPosition());
-			b.setTextAndImage(btnText);
+		for (PositionImage pi : this.positionImages) {
+			String btnText = this.model.pieceTextAt(pi.getPosition());
+			pi.setImage(btnText);
 		}
 		this.timeLabel.setText(this.model.getTimerValue() + "");
 		this.solveButton.setDisable(false);
@@ -181,29 +177,25 @@ public class FifteenJavaFXGUI extends Application implements View {
 		if (lastMove != null) {
 			int line1 = lastMove.getBegin().getLine();
 			int col1 = lastMove.getBegin().getCol();
-			PieceJFXButton b1 = this.buttons.get(line1 * FifteenModel.N_COLS + col1);
-			String text1 = b1.getText();
+			PositionImage pi1 = this.positionImages.get(line1 * FifteenModel.N_COLS + col1);
+			String text1 = pi1.getImageName();
 
 			int line2 = lastMove.getEnd().getLine();
 			int col2 = lastMove.getEnd().getCol();
-			PieceJFXButton b2 = this.buttons.get(line2 * FifteenModel.N_COLS + col2);
-			String text2 = b2.getText();
+			PositionImage pi2 = this.positionImages.get(line2 * FifteenModel.N_COLS + col2);
+			String text2 = pi2.getImageName();
 
-			b1.setTextAndImage(text2);
-			b2.setTextAndImage(text1);
+			pi1.setImage(text2);
+			pi2.setImage(text1);
 		}
 	}
 
 	@Override
 	public void notifyView(Move lastMove, Boolean wins, int timerValue) {
 		Platform.runLater(() -> {
-
-
 			if (lastMove != null) {
 				this.updateLayoutAfterMove(lastMove);
 			}
-
-
 			if (wins) {
 				this.model.stopTimer();
 				new Alert(AlertType.INFORMATION, "You win! ").showAndWait();
@@ -212,7 +204,6 @@ public class FifteenJavaFXGUI extends Application implements View {
 				this.model.startTimer();
 				this.updateAllLayout();
 			}
-
 			this.timeLabel.setText(timerValue + "");
 		});
 	}
