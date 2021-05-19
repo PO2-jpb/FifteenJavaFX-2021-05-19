@@ -106,7 +106,7 @@ public class FifteenModel {
      */
     public String pieceTextAt(Position position) {
         int i = this.pieceAt(position);
-        return i == EMPTY ? "empty" : i + "";
+        return (i == EMPTY) ? ("empty") : (i + "");
     }
 
     /**
@@ -204,7 +204,6 @@ public class FifteenModel {
      * Tries to move a piece at position If moved notifies views
      *
      * @param position position of piece to move
-     * @return true if moved, false otherwise
      */
     private void movePieceAt(Position position) {
         if (position.isInside()) {
@@ -267,7 +266,6 @@ public class FifteenModel {
      * Applies move m to the board assert(move != null)
      *
      * @param move the move to apply
-     * @return true
      */
     private void applyMove(Move move) {
         assert (move != null);
@@ -327,7 +325,7 @@ public class FifteenModel {
     /**
      * Wait the specified time in milliseconds
      *
-     * @param sleepTime
+     * @param sleepTime time in miliseconds
      */
     public static void sleep(int sleepTime) {
         try {
