@@ -2,20 +2,13 @@ package pt.ipbeja.estig.fifteen.model;
 
 import pt.ipbeja.estig.fifteen.gui.View;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.List;
-import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 
 /**
  * The fifteen puzzle model
  *
  * @author João Paulo Barros
- * @version 2014/05/19 - 2016/04/03 - 2017/04/19 - 2019/05/06 - 2021/05/18
+ * @version 2014/05/19 - 2016/04/03 - 2017/04/19 - 2019/05/06 - 2021/05/18 - 2021/05/21
  */
 public class FifteenModel {
     public static final int N_LINES = 4;
@@ -25,7 +18,7 @@ public class FifteenModel {
     private final static Random RAND = new Random();
     private final static int[][] NEIGHBORS = {{-1, 0}, {0, -1}, {0, 1}, {1, 0}};
 
-    private int pieces[][];
+    private int[][] pieces;
     private Position emptyPosition;
 
     private Deque<Move> moves;
@@ -114,7 +107,6 @@ public class FifteenModel {
      *
      * @param minMoves minimum of moves
      * @param maxMoves maximum of moves
-     * @return the moves executed, but in reverse order
      */
     public void mix(int minMoves, int maxMoves) {
         assert (minMoves <= maxMoves);
@@ -336,31 +328,23 @@ public class FifteenModel {
     }
 
     @Override
-    public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + ((moves == null) ? 0 : moves.hashCode());
-        result = prime * result + Arrays.deepHashCode(pieces);
-        return result;
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FifteenModel that = (FifteenModel) o;
+        return timerValue == that.timerValue &&
+                Arrays.equals(pieces, that.pieces) &&
+                Objects.equals(emptyPosition, that.emptyPosition) &&
+                Objects.equals(moves, that.moves) &&
+                Objects.equals(timer, that.timer) &&
+                Objects.equals(view, that.view);
     }
 
     @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (obj == null)
-            return false;
-        if (getClass() != obj.getClass())
-            return false;
-        FifteenModel other = (FifteenModel) obj;
-        if (moves == null) {
-            if (other.moves != null)
-                return false;
-        } else if (!moves.equals(other.moves))
-            return false;
-        if (!Arrays.deepEquals(pieces, other.pieces))
-            return false;
-        return true;
+    public int hashCode() {
+        int result = Objects.hash(emptyPosition, moves, timer, timerValue, view);
+        result = 31 * result + Arrays.hashCode(pieces);
+        return result;
     }
 
     /**

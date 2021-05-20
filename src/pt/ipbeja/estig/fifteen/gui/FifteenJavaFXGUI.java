@@ -1,11 +1,8 @@
 package pt.ipbeja.estig.fifteen.gui;
 
-import java.util.*;
-
+import javafx.animation.TranslateTransition;
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.event.EventHandler;
-import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
@@ -13,211 +10,231 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCode;
-import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.Pane;
-import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.util.Duration;
 import pt.ipbeja.estig.fifteen.model.Direction;
 import pt.ipbeja.estig.fifteen.model.FifteenModel;
 import pt.ipbeja.estig.fifteen.model.Move;
 import pt.ipbeja.estig.fifteen.model.Position;
 
+import java.util.HashMap;
+import java.util.Map;
+
+//transparent
+//https://stackoverflow.com/questions/34033119/how-to-make-transparent-scene-and-stage-in-javafx
+
 /**
  * The fifteen main view
- * 
- * @author João Paulo Barros e Rui Pais
- * @version 2014/05/19 - 2016/04/03 - 2017/04/19 - 2019/05/06 - 2021/05/18
+ *
+ * @author João Paulo Barros
+ * @version 2021/05/20
  */
 public class FifteenJavaFXGUI extends Application implements View {
-	private final String ICON_FILE = "/resources/images/puzzle15.jpg";
-	private FifteenModel model;
+    private static final String ICON_FILE = "/resources/images/puzzle15.jpg";
+    private final FifteenModel model;
 
-	private List<PositionImage> positionImages;
-	private Button solveButton;
-	private GridPane panBtns;
-	private Label timeLabel;
-	private static Map<KeyCode, Direction> directionMap = new HashMap<>();
-	static {
-		directionMap.put(KeyCode.UP, Direction.UP);
-		directionMap.put(KeyCode.DOWN, Direction.DOWN);
-		directionMap.put(KeyCode.LEFT, Direction.LEFT);
-		directionMap.put(KeyCode.RIGHT, Direction.RIGHT);
-	}
+    private final PositionImage[][] positionImages;
+    private Button closeButton;
+    private Button solveButton;
+    private Label timeLabel;
+    private Pane pane;
 
-	/**
-	 * Create window with board
-	 */
-	public FifteenJavaFXGUI() {
-		this.model = null;
-		this.positionImages = null;
-	}
+    private static final Map<KeyCode, Direction> directionMap = new HashMap<>();
 
-	@Override
-	public void start(Stage stage) {
-		this.createModel();
-		this.mixModel();
+    static {
+        directionMap.put(KeyCode.UP, Direction.UP);
+        directionMap.put(KeyCode.DOWN, Direction.DOWN);
+        directionMap.put(KeyCode.LEFT, Direction.LEFT);
+        directionMap.put(KeyCode.RIGHT, Direction.RIGHT);
+    }
 
-		Scene scnMain = this.createScene();
+    /**
+     * Start program
+     *
+     * @param args currently not used
+     */
+    public static void main(String[] args) {
+        Application.launch(args);
+    }
 
-		stage.setTitle("Fifteen Puzzle");
-		this.setAppIcon(stage, ICON_FILE);
-		stage.setScene(scnMain);
-		stage.show();
+    /**
+     * Create window with board
+     */
+    public FifteenJavaFXGUI() {
+        this.model = new FifteenModel(this);
+        this.model.mix(5, 10);
+        this.positionImages = new PositionImage[FifteenModel.N_LINES][FifteenModel.N_COLS];
+    }
 
-		this.model.startTimer();
-	}
+    @Override
+    public void start(Stage stage) {
+        this.setAppIcon(stage, ICON_FILE);
+        stage.setTitle("Fifteen Puzzle");
 
-	/**
-	 * Executed on exit to stop all threads
-	 */
-	@Override
-	public void stop() {
-		System.out.println("END");
-		System.exit(0);
-	}
+        stage.initStyle(StageStyle.TRANSPARENT);
+        stage.setScene(this.createScene());
+        stage.show();
 
-	private void setAppIcon(Stage stage, String filename) {
-		try {
-			Image ico = new Image(filename);
-			stage.getIcons().add(ico);
-		} catch (Exception ex) {
-			System.err.println("Error setting icon");
-		}
-	}
+        this.model.startTimer();
+    }
 
-	private Pane createButtonsUI() {
-		int nRows = FifteenModel.N_LINES;
-		int nCols = FifteenModel.N_COLS;
-		this.panBtns = new GridPane();
-		this.panBtns.setAlignment(Pos.CENTER);
+    /**
+     * Executed on exit to stop all threads
+     */
+    @Override
+    public void stop() {
+        System.out.println("END");
+        System.exit(0);
+    }
 
-		this.positionImages = new ArrayList<>();
-		for (int row = 0; row < nRows; row++) {
-			for (int col = 0; col < nCols; col++) {
-				Position pos = new Position(row, col);
-				String text = this.model.pieceTextAt(pos);
-				PositionImage pi = new PositionImage(text, pos);
-				this.panBtns.add(pi, col, row);
-				this.positionImages.add(pi);
-				pi.setOnMouseClicked(this::handle);
+    private void setAppIcon(Stage stage, String filename) {
+        try {
+            Image ico = new Image(filename);
+            stage.getIcons().add(ico);
+        } catch (Exception ex) {
+            System.err.println("Error setting icon");
+        }
+    }
 
-				GridPane.setVgrow(pi, Priority.ALWAYS);
-				GridPane.setHgrow(pi, Priority.ALWAYS);
-			}
-		}
-		return panBtns;
-	}
+    private Scene createScene() {
+        VBox vbxMain = new VBox();
+        vbxMain.setStyle("-fx-border-color: black;\n" + "-fx-background-color: transparent");
 
-	/**
-	 * Handle button press by asking the model to execute the respective actions
-	 * The model is then responsible to notify this (and other) views
-	 */
-	public void handle(MouseEvent e) {
-		PositionImage pi = (PositionImage) e.getSource();
-		Position pos = pi.getPosition();
-		model.pieceSelected(pos); // inform model
-	}
+        this.closeButton = new Button("Quit");
+        this.closeButton.setMaxWidth(Integer.MAX_VALUE);
+        this.closeButton.setStyle("-fx-background-color: #FF9933; ");
+        this.closeButton.setOnAction(event -> System.exit(0) );
 
-	void setKeyHandle(Scene scnMain) {
-		scnMain.setOnKeyPressed(new EventHandler<KeyEvent>() {
-			@Override
-			public void handle(KeyEvent event) {
-				model.keyPressed(directionMap.get(event.getCode()));
-			}
-		});
-	}
+        this.solveButton = new Button("Solve");
+        this.solveButton.setMaxWidth(Integer.MAX_VALUE);
+        this.solveButton.setStyle("-fx-background-color: #CCFFCC; ");
+        this.solveButton.setOnAction(event -> {
+            pane.setDisable(true);
+            solveButton.setDisable(true);
+            model.solve();
+        });
 
-	private Scene createScene() {
-		VBox vbxMain = new VBox();
-		this.solveButton = new Button("Solve!");
-		this.solveButton.setMaxWidth(Integer.MAX_VALUE);
-		this.solveButton.setStyle("-fx-background-color: #ffff33; ");
-		this.solveButton.setOnAction(event -> {
-			panBtns.setDisable(true);
-			this.solveButton.setDisable(true);
-			model.solve();
-		});
-		this.timeLabel = new Label(this.model.getTimerValue() + "");
-		vbxMain.getChildren().addAll(solveButton, this.timeLabel);
-		vbxMain.getChildren().addAll(this.createButtonsUI());
-		Scene scnMain = new Scene(vbxMain);
-		this.setKeyHandle(scnMain);
+        this.timeLabel = new Label(this.model.getTimerValue() + "");
+        this.timeLabel.setMaxWidth(Integer.MAX_VALUE);
+        this.timeLabel.setStyle("-fx-background-color: #33ff33; -fx-alignment:center; " +
+                                "-fx-font-size: 1cm;");
 
-		return scnMain;
-	}
+        this.pane = new Pane();
+        this.pane.setBackground(new Background(new BackgroundFill(Color.TRANSPARENT, null, null)));
 
-	private void createModel() {
-		this.model = new FifteenModel(this);
-	}
+        this.createPieces();
 
-	/**
-	 * Makes a number of moves to mix the puzzle. The mix is not very smart as
-	 * the moves can be symmetric in consecutive moments.
-	 */
-	private void mixModel() {
-		this.model.mix(5, 10);
-	}
+        vbxMain.getChildren().addAll(
+                this.closeButton,
+                this.solveButton,
+                this.timeLabel,
+                this.pane);
 
-	/**
-	 * Updates the pieces content by asking the model
-	 */
-	private void updateAllLayout() {
-		for (PositionImage pi : this.positionImages) {
-			String btnText = this.model.pieceTextAt(pi.getPosition());
-			pi.setImage(btnText);
-		}
-		this.timeLabel.setText(this.model.getTimerValue() + "");
-		this.solveButton.setDisable(false);
-	}
+        Scene scene = new Scene(vbxMain, Color.TRANSPARENT);
+        this.setKeyHandle(scene);
 
-	public void updateLayoutAfterMove(Move lastMove) {
-		if (lastMove != null) {
-			int line1 = lastMove.getBegin().getLine();
-			int col1 = lastMove.getBegin().getCol();
-			PositionImage pi1 = this.positionImages.get(line1 * FifteenModel.N_COLS + col1);
-			String text1 = pi1.getImageName();
-
-			int line2 = lastMove.getEnd().getLine();
-			int col2 = lastMove.getEnd().getCol();
-			PositionImage pi2 = this.positionImages.get(line2 * FifteenModel.N_COLS + col2);
-			String text2 = pi2.getImageName();
-
-			pi1.setImage(text2);
-			pi2.setImage(text1);
-		}
-	}
-
-	@Override
-	public void notifyView(Move lastMove, Boolean wins, int timerValue) {
-		Platform.runLater(() -> {
-			if (lastMove != null) {
-				this.updateLayoutAfterMove(lastMove);
-			}
-			if (wins) {
-				this.model.stopTimer();
-				new Alert(AlertType.INFORMATION, "You win! ").showAndWait();
-				this.mixModel();
-				this.panBtns.setDisable(false);
-				this.model.startTimer();
-				this.updateAllLayout();
-			}
-			this.timeLabel.setText(timerValue + "");
-		});
-	}
-
-	/**
-	 * Start program
-	 * 
-	 * @param args
-	 *            currently not used
-	 */
-	public static void main(String[] args) {
-		Application.launch(args);
-	}
+        return scene;
+    }
 
 
+    private void createPieces() {
+        int nLines = FifteenModel.N_LINES;
+        int nCols = FifteenModel.N_COLS;
 
+        this.pane.getChildren().clear();
+        for (int line = 0; line < nLines; line++) {
+            for (int col = 0; col < nCols; col++) {
+                Position pos = new Position(line, col);
+                String text = this.model.pieceTextAt(pos);
+                PositionImage pi = new PositionImage(text, pos);
+                this.pane.getChildren().add(pi); // add to gui
+                this.positionImages[line][col] = pi; // add to array
+                pi.setOnMouseClicked(this::handle);
+            }
+        }
+    }
+
+    /**
+     * Handle button press by asking the model to execute the respective actions
+     * The model is then responsible to notify this (and other) views
+     */
+    public void handle(MouseEvent e) {
+        PositionImage pi = (PositionImage) e.getSource();
+        Position pos = pi.getLineCol();
+        model.pieceSelected(pos); // inform model
+    }
+
+    void setKeyHandle(Scene scene) {
+        scene.setOnKeyPressed(keyEvent -> {
+            Direction dir = FifteenJavaFXGUI.directionMap.get(keyEvent.getCode());
+            if (dir != null) {
+                model.keyPressed(dir);
+            } else {
+                // close stage (and program) with escape ou Q keys
+                if (keyEvent.getCode() == KeyCode.ESCAPE || keyEvent.getCode() == KeyCode.Q) {
+                    Stage stage = (Stage)scene.getWindow();
+                    stage.close();
+                }
+            }
+        });
+    }
+
+    /**
+     * Updates the pieces content by asking the model. After a win
+     */
+    private void restart() {
+        this.model.mix(5, 10);
+        this.pane.setDisable(false);
+        this.model.startTimer();
+        this.createPieces();
+        this.solveButton.setDisable(false);
+    }
+
+    public void updateLayoutAfterMove(Move lastMove) {
+        if (lastMove != null) {
+            int beginLine = lastMove.getBegin().getLine();
+            int beginCol = lastMove.getBegin().getCol();
+            int endLine = lastMove.getEnd().getLine();
+            int endCol = lastMove.getEnd().getCol();
+
+            PositionImage imageToMove = this.positionImages[beginLine][beginCol];
+            PositionImage imageToReplace = this.positionImages[endLine][endCol];
+
+            TranslateTransition tt =
+                    new TranslateTransition(Duration.millis(500), imageToMove);
+            int dCol = endCol - beginCol;
+            int dLine = endLine - beginLine;
+            tt.setByX(dCol * PositionImage.SIZE);
+            tt.setByY(dLine * PositionImage.SIZE);
+            tt.play();
+
+            imageToMove.updateLineCol(dCol, dLine);
+            this.positionImages[endLine][endCol] = imageToMove;
+
+            imageToReplace.setLineColAndXY(new Position(beginLine, beginCol));
+            this.positionImages[beginLine][beginCol] = imageToReplace;
+        }
+    }
+
+    @Override
+    public void notifyView(Move lastMove, Boolean wins, int timerValue) {
+        Platform.runLater(() -> {
+            if (lastMove != null) {
+                this.updateLayoutAfterMove(lastMove);
+            }
+            if (wins) {
+                this.model.stopTimer();
+                new Alert(AlertType.INFORMATION, "You win! ").showAndWait();
+                this.restart();
+            }
+            this.timeLabel.setText(timerValue + "");
+        });
+    }
 }
